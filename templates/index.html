@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Javid Stego - Secure Zip-in-Image Storage</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="glow-bg-secondary"></div>
+
+    <div class="container animate-fade-in">
+        <header>
+            <div class="logo">
+                <h1>JAVID <span>STEGO</span></h1>
+            </div>
+            <p class="subtitle">Securely hide zip files and documents inside images with optional social media compression resistance</p>
+        </header>
+
+        <div class="tabs-container">
+            <button class="tab-btn active" id="tab-hide" onclick="switchTab('hide')">
+                <i class="fa-solid fa-mask"></i> Hide File
+            </button>
+            <button class="tab-btn" id="tab-reveal" onclick="switchTab('reveal')">
+                <i class="fa-solid fa-key"></i> Reveal File
+            </button>
+        </div>
+
+        <div class="main-card glass-panel">
+            <!-- HIDE FILE FORM -->
+            <form id="hide-form" class="stego-form active" enctype="multipart/form-data">
+                <div class="form-grid">
+                    <!-- Left Side: Inputs -->
+                    <div class="form-inputs">
+                        <div class="file-upload-wrapper">
+                            <label class="form-label">Cover Image <span class="required">*</span></label>
+                            <div class="drag-drop-zone" id="cover-drop-zone">
+                                <input type="file" id="cover-input" name="cover" accept="image/png, image/jpeg" required>
+                                <i class="fa-regular fa-image upload-icon"></i>
+                                <div class="upload-text">
+                                    <span class="highlight">Click to upload</span> or drag and drop
+                                    <p class="file-hint">PNG or JPEG format</p>
+                                </div>
+                                <div class="file-preview-info" id="cover-preview"></div>
+                            </div>
+                        </div>
+
+                        <div class="file-upload-wrapper">
+                            <label class="form-label">File to Hide <span class="required">*</span></label>
+                            <div class="drag-drop-zone" id="payload-drop-zone">
+                                <input type="file" id="payload-input" name="payload" required>
+                                <i class="fa-regular fa-file-zipper upload-icon"></i>
+                                <div class="upload-text">
+                                    <span class="highlight">Click to upload</span> or drag and drop
+                                    <p class="file-hint">Any file type (auto-zipped on upload)</p>
+                                </div>
+                                <div class="file-preview-info" id="payload-preview"></div>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="hide-password" class="form-label">Encryption Password <span class="required">*</span></label>
+                            <div class="password-wrapper">
+                                <input type="password" id="hide-password" name="password" placeholder="Enter security password" required>
+                                <i class="fa-regular fa-eye-slash toggle-pw" onclick="togglePassword('hide-password', this)"></i>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="form-label">Steganography Method</label>
+                            <div class="method-selector">
+                                <label class="method-card active">
+                                    <input type="radio" name="method" value="auto" checked onclick="selectMethod('auto')">
+                                    <span class="method-info">
+                                        <span class="method-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto / Deflate</span>
+                                        <span class="method-desc">Invisible. High capacity. PNG only. Perfect for document uploads.</span>
+                                    </span>
+                                </label>
+                                <label class="method-card">
+                                    <input type="radio" name="method" value="robust" onclick="selectMethod('robust')">
+                                    <span class="method-info">
+                                        <span class="method-title"><i class="fa-solid fa-shield-halved"></i> Robust Block</span>
+                                        <span class="method-desc">Survives social media & JPEG compression. Subtle pixel noise. Low capacity.</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Capacity / Options -->
+                    <div class="form-options">
+                        <!-- Capacity Card (Hidden by default, shown for robust) -->
+                        <div class="glass-panel sub-panel" id="capacity-card">
+                            <h3 class="panel-title"><i class="fa-solid fa-chart-pie"></i> Capacity Analyzer</h3>
+                            <div class="capacity-stats">
+                                <div class="stat-row">
+                                    <span>Cover Dimensions:</span>
+                                    <strong id="val-dimensions">-</strong>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Payload Size:</span>
+                                    <strong id="val-payload-size">-</strong>
+                                </div>
+                                <div class="stat-row">
+                                    <span>Max Allowed Size:</span>
+                                    <strong id="val-max-size">-</strong>
+                                </div>
+                            </div>
+                            
+                            <div class="progress-bar-wrapper">
+                                <div class="progress-bar-label">
+                                    <span>Capacity Used</span>
+                                    <span id="capacity-percentage">0%</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" id="capacity-fill"></div>
+                                </div>
+                            </div>
+                            <div class="capacity-warning" id="capacity-warning-msg">
+                                <i class="fa-solid fa-triangle-exclamation"></i> File is too large for the current cover image and settings.
+                            </div>
+                        </div>
+
+                        <!-- Advanced Parameters -->
+                        <div class="glass-panel sub-panel" id="advanced-hide-panel">
+                            <div class="panel-header-btn" onclick="toggleAdvanced('advanced-hide-content')">
+                                <h3 class="panel-title"><i class="fa-solid fa-sliders"></i> Advanced Settings</h3>
+                                <i class="fa-solid fa-chevron-down arrow-icon" id="advanced-hide-arrow"></i>
+                            </div>
+                            <div class="panel-content hidden" id="advanced-hide-content">
+                                <div class="input-group">
+                                    <div class="range-label">
+                                        <span>Block Size (px):</span>
+                                        <span id="val-block-size">8</span>
+                                    </div>
+                                    <input type="range" name="block_size" min="4" max="16" step="2" value="8" oninput="updateRangeVal(this, 'val-block-size')">
+                                    <span class="range-desc">Grid block size for pixel modulation. Smaller size increases capacity but reduces survival rate.</span>
+                                </div>
+                                <div class="input-group">
+                                    <div class="range-label">
+                                        <span>Redundancy Factor:</span>
+                                        <span id="val-redundancy">3</span>
+                                    </div>
+                                    <input type="range" name="redundancy" min="1" max="9" step="2" value="3" oninput="updateRangeVal(this, 'val-redundancy')">
+                                    <span class="range-desc">Number of times each bit is repeated. Higher values increase reliability but decrease capacity.</span>
+                                </div>
+                                <div class="input-group">
+                                    <div class="range-label">
+                                        <span>Modulation Strength:</span>
+                                        <span id="val-strength">25</span>
+                                    </div>
+                                    <input type="range" name="strength" min="5" max="60" step="5" value="25" oninput="updateRangeVal(this, 'val-strength')">
+                                    <span class="range-desc">Luminance shift amount. Higher values survive JPEG compression better but make the pattern more visible.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="actions-panel">
+                            <button type="submit" class="submit-btn" id="hide-submit-btn">
+                                <span class="btn-text"><i class="fa-solid fa-download"></i> Embed & Download Image</span>
+                                <span class="spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Embedding payload...</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- REVEAL FILE FORM -->
+            <form id="reveal-form" class="stego-form" enctype="multipart/form-data">
+                <div class="form-grid">
+                    <!-- Left Side: Inputs -->
+                    <div class="form-inputs">
+                        <div class="file-upload-wrapper">
+                            <label class="form-label">Stego Image <span class="required">*</span></label>
+                            <div class="drag-drop-zone" id="stego-drop-zone">
+                                <input type="file" id="stego-input" name="stego" accept="image/png, image/jpeg" required>
+                                <i class="fa-regular fa-image upload-icon"></i>
+                                <div class="upload-text">
+                                    <span class="highlight">Click to upload</span> or drag and drop
+                                    <p class="file-hint">Select the image containing the hidden data</p>
+                                </div>
+                                <div class="file-preview-info" id="stego-preview"></div>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="reveal-password" class="form-label">Decryption Password <span class="required">*</span></label>
+                            <div class="password-wrapper">
+                                <input type="password" id="reveal-password" name="password" placeholder="Enter security password" required>
+                                <i class="fa-regular fa-eye-slash toggle-pw" onclick="togglePassword('reveal-password', this)"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Config & Actions -->
+                    <div class="form-options">
+                        <!-- Advanced Parameters for Reveal -->
+                        <div class="glass-panel sub-panel" id="advanced-reveal-panel">
+                            <div class="panel-header-btn" onclick="toggleAdvanced('advanced-reveal-content')">
+                                <h3 class="panel-title"><i class="fa-solid fa-sliders"></i> Extraction Settings</h3>
+                                <i class="fa-solid fa-chevron-down arrow-icon" id="advanced-reveal-arrow"></i>
+                            </div>
+                            <div class="panel-content hidden" id="advanced-reveal-content">
+                                <div class="input-group">
+                                    <div class="range-label">
+                                        <span>Block Size (px):</span>
+                                        <span id="val-reveal-block-size">8</span>
+                                    </div>
+                                    <input type="range" name="block_size" min="4" max="16" step="2" value="8" oninput="updateRangeVal(this, 'val-reveal-block-size')">
+                                    <span class="range-desc">Must match the block size used during embedding (Default is 8).</span>
+                                </div>
+                                <div class="input-group">
+                                    <div class="range-label">
+                                        <span>Redundancy Factor:</span>
+                                        <span id="val-reveal-redundancy">3</span>
+                                    </div>
+                                    <input type="range" name="redundancy" min="1" max="9" step="2" value="3" oninput="updateRangeVal(this, 'val-reveal-redundancy')">
+                                    <span class="range-desc">Must match the redundancy factor used during embedding (Default is 3).</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="actions-panel">
+                            <button type="submit" class="submit-btn highlight-btn" id="reveal-submit-btn">
+                                <span class="btn-text"><i class="fa-solid fa-unlock-keyhole"></i> Decrypt & Extract File</span>
+                                <span class="spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Extracting payload...</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Result / Alert Card -->
+        <div id="alert-card" class="alert-card hidden">
+            <i id="alert-icon" class="fa-solid"></i>
+            <div id="alert-message"></div>
+            <button class="alert-close-btn" onclick="closeAlert()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <footer>
+            <p>Original algorithm: <a href="https://github.com/Iman/javid-steganography" target="_blank" rel="noopener noreferrer">https://github.com/Iman/javid-steganography</a></p>
+        </footer>
+    </div>
+
+    <!-- Custom Script -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
